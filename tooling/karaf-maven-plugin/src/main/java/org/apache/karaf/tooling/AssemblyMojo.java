@@ -38,12 +38,14 @@ import org.apache.karaf.tooling.utils.MojoSupport;
 import org.apache.karaf.tools.utils.model.KarafPropertyEdits;
 import org.apache.karaf.tools.utils.model.io.stax.KarafPropertyInstructionsModelStaxReader;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
 
 /**
  * Creates a customized Karaf distribution by installing features and setting up
@@ -61,141 +63,141 @@ public class AssemblyMojo extends MojoSupport {
      * Base directory used to overwrite resources in generated assembly after the build (resource directory).
      */
     @Parameter(defaultValue = "${project.basedir}/src/main/resources/assembly")
-    protected File sourceDirectory;
+    File sourceDirectory;
 
     /**
      * Base directory used to copy the resources during the build (working directory).
      */
     @Parameter(defaultValue = "${project.build.directory}/assembly")
-    protected File workDirectory;
+    File workDirectory;
 
     /**
      * Features configuration file (etc/org.apache.karaf.features.cfg).
      */
     @Parameter(defaultValue = "${project.build.directory}/assembly/etc/org.apache.karaf.features.cfg")
-    protected File featuresCfgFile;
+    File featuresCfgFile;
 
     /**
      * startup.properties file.
      */
     @Parameter(defaultValue = "${project.build.directory}/assembly/etc/startup.properties")
-    protected File startupPropertiesFile;
+    File startupPropertiesFile;
 
     /**
      * Directory used during build to construction the Karaf system repository.
      */
     @Parameter(defaultValue="${project.build.directory}/assembly/system")
-    protected File systemDirectory;
+    File systemDirectory;
 
     /**
      * default start level for bundles in features that don't specify it.
      */
     @Parameter
-    protected int defaultStartLevel = 30;
+    int defaultStartLevel = 30;
 
     @Parameter
-    private List<String> startupRepositories;
+    List<String> startupRepositories;
     @Parameter
-    private List<String> bootRepositories;
+    List<String> bootRepositories;
     @Parameter
-    private List<String> installedRepositories;
+    List<String> installedRepositories;
 
     @Parameter
-    private List<String> blacklistedRepositories;
+    List<String> blacklistedRepositories;
 
     /**
      * List of features from runtime-scope features xml and kars to be installed into system and listed in startup.properties.
      */
     @Parameter
-    private List<String> startupFeatures;
+    List<String> startupFeatures;
 
     /**
      * List of features from runtime-scope features xml and kars to be installed into system repo and listed in features service boot features.
      */
     @Parameter
-    private List<String> bootFeatures;
+    List<String> bootFeatures;
 
     /**
      * List of features from runtime-scope features xml and kars to be installed into system repo and not mentioned elsewhere.
      */
     @Parameter
-    private List<String> installedFeatures;
+    List<String> installedFeatures;
 
     @Parameter
-    private List<String> blacklistedFeatures;
+    List<String> blacklistedFeatures;
 
     @Parameter
-    private List<String> startupBundles;
+    List<String> startupBundles;
     @Parameter
-    private List<String> bootBundles;
+    List<String> bootBundles;
     @Parameter
-    private List<String> installedBundles;
+    List<String> installedBundles;
     @Parameter
-    private List<String> blacklistedBundles;
+    List<String> blacklistedBundles;
     
     @Parameter
-    private String profilesUri;
+    String profilesUri;
 
     @Parameter
-    private List<String> bootProfiles;
+    List<String> bootProfiles;
 
     @Parameter
-    private List<String> startupProfiles;
+    List<String> startupProfiles;
 
     @Parameter
-    private List<String> installedProfiles;
+    List<String> installedProfiles;
 
     @Parameter
-    private List<String> blacklistedProfiles;
+    List<String> blacklistedProfiles;
 
     @Parameter
-    private Builder.BlacklistPolicy blacklistPolicy = Builder.BlacklistPolicy.Discard;
+    Builder.BlacklistPolicy blacklistPolicy = Builder.BlacklistPolicy.Discard;
 
     /**
      * Ignore the dependency attribute (dependency="[true|false]") on bundle
      */
     @Parameter(defaultValue = "false")
-    protected boolean ignoreDependencyFlag;
+    boolean ignoreDependencyFlag;
 
     /**
      * Additional feature repositories
      */
     @Parameter
-    protected List<String> featureRepositories;
+    List<String> featureRepositories;
 
     @Parameter
-    protected List<String> libraries;
+    List<String> libraries;
 
     /**
      * Use reference: style urls in startup.properties
      */
     @Parameter(defaultValue = "false")
-    protected boolean useReferenceUrls;
+    boolean useReferenceUrls;
 
     /**
      * Include project build output directory in the assembly
      */
     @Parameter(defaultValue = "true")
-    protected boolean includeBuildOutputDirectory;
+    boolean includeBuildOutputDirectory;
 
     @Parameter
-    protected boolean installAllFeaturesByDefault = true;
+    boolean installAllFeaturesByDefault = true;
 
     @Parameter
-    protected Builder.KarafVersion karafVersion = Builder.KarafVersion.v4x;
+    Builder.KarafVersion karafVersion = Builder.KarafVersion.v4x;
 
     /**
      * Specify the version of Java SE to be assumed for osgi.ee.
      */
     @Parameter(defaultValue = "1.8")
-    protected String javase;
+    String javase;
 
     /**
      * Specify which framework to use
      * (one of framework, framework-logback, static-framework, static-framework-logback).
      */
     @Parameter
-    protected String framework;
+    String framework;
 
     /**
      * Specify an XML file that instructs this goal to apply edits to
@@ -233,14 +235,14 @@ public class AssemblyMojo extends MojoSupport {
      </pre>
      */
     @Parameter(defaultValue = "${project.basedir}/src/main/karaf/assembly-property-edits.xml")
-    protected String propertyFileEdits;
+    String propertyFileEdits;
 
     /**
      * Glob specifying which configuration pids in the selected boot features
      * should be extracted to the etc directory.
      */
     @Parameter
-    protected List<String> pidsToExtract = Collections.singletonList("*");
+    List<String> pidsToExtract = Collections.singletonList("*");
 
     /**
      * Specify a set of translated urls to use instead of downloading the artifacts
@@ -248,13 +250,17 @@ public class AssemblyMojo extends MojoSupport {
      * built artifacts from the maven project.
      */
     @Parameter
-    protected Map<String, String> translatedUrls;
+    Map<String, String> translatedUrls;
 
     @Parameter
-    protected Map<String, String> config;
+    Map<String, String> config;
 
     @Parameter
-    protected Map<String, String> system;
+    Map<String, String> system;
+    
+    // Will be overridden for tests
+    Builder builder = Builder.newInstance();
+    KarafPropertyInstructionsModelStaxReader profileEditsReader = new KarafPropertyInstructionsModelStaxReader();
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -269,7 +275,7 @@ public class AssemblyMojo extends MojoSupport {
         }
     }
 
-    protected void doExecute() throws Exception {
+    void doExecute() throws Exception {
         startupRepositories = nonNullList(startupRepositories);
         bootRepositories = nonNullList(bootRepositories);
         installedRepositories = nonNullList(installedRepositories);
@@ -315,8 +321,6 @@ public class AssemblyMojo extends MojoSupport {
             }
         }
         getLog().info("Using repositories: " + remote.toString());
-
-        Builder builder = Builder.newInstance();
         builder.offline(mavenSession.isOffline());
         builder.localRepository(localRepo.getBasedir());
         builder.mavenRepositories(remote.toString());
@@ -342,8 +346,7 @@ public class AssemblyMojo extends MojoSupport {
             if (file.exists()) {
                 KarafPropertyEdits edits;
                 try (InputStream editsStream = new FileInputStream(propertyFileEdits)) {
-                    KarafPropertyInstructionsModelStaxReader kipmsr = new KarafPropertyInstructionsModelStaxReader();
-                    edits = kipmsr.read(editsStream, true);
+                    edits = profileEditsReader.read(editsStream, true);
                 }
                 builder.propertyEdits(edits);
             }
@@ -575,6 +578,19 @@ public class AssemblyMojo extends MojoSupport {
 
     private List<String> nonNullList(List<String> list) {
         return list == null ? new ArrayList<>() : list;
+    }
+    
+    @Override
+    public MavenProject getProject() {
+        return super.getProject();
+    }
+    
+    public void setProject(MavenProject project) {
+        this.project = project;
+    }
+
+    public void setLocalRepo(ArtifactRepository localRepo) {
+        this.localRepo = localRepo;
     }
 
 }

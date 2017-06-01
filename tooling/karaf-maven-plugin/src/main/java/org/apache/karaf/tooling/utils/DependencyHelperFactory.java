@@ -24,7 +24,8 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.sonatype.aether.repository.RemoteRepository;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
 
 import java.util.List;
 
@@ -51,26 +52,17 @@ public class DependencyHelperFactory {
      */
     public static DependencyHelper createDependencyHelper(PlexusContainer container, MavenProject mavenProject, MavenSession mavenSession, Log log) throws MojoExecutionException {
         try {
-            if (container.hasComponent("org.sonatype.aether.RepositorySystem")) {
-                org.sonatype.aether.RepositorySystem system = container.lookup(org.sonatype.aether.RepositorySystem.class);
-                org.sonatype.aether.RepositorySystemSession session = mavenSession.getRepositorySession();
-                List<RemoteRepository> repositories = mavenProject.getRemoteProjectRepositories();
-                return new Dependency30Helper(repositories, session, system);
-            } else if (container.hasComponent("org.eclipse.aether.RepositorySystem")) {
-                org.eclipse.aether.RepositorySystem system = container.lookup(org.eclipse.aether.RepositorySystem.class);
-                Object session;
-                try {
-                    session = MavenSession.class.getMethod("getRepositorySession").invoke(mavenSession);
-                } catch (Exception e) {
-                    throw new MojoExecutionException(e.getMessage(), e);
-                }
+            RepositorySystem system = container.lookup(RepositorySystem.class);
+            try {
+                RepositorySystemSession session = mavenSession.getRepositorySession();
                 List<?> repositories = mavenProject.getRemoteProjectRepositories();
                 return new Dependency31Helper(repositories, session, system);
+            } catch (Exception e) {
+                throw new MojoExecutionException(e.getMessage(), e);
             }
         } catch (ComponentLookupException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
-        throw new MojoExecutionException("Cannot locate either org.sonatype.aether.RepositorySystem or org.eclipse.aether.RepositorySystem");
     }
 
 }

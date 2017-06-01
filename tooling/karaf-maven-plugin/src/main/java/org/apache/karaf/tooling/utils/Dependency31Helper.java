@@ -80,9 +80,9 @@ public class Dependency31Helper implements DependencyHelper {
     protected String treeListing;
 
     @SuppressWarnings("unchecked")
-    public Dependency31Helper(List<?> repositories, Object session, RepositorySystem repositorySystem) {
+    public Dependency31Helper(List<?> repositories, RepositorySystemSession session, RepositorySystem repositorySystem) {
         this.projectRepositories = (List<RemoteRepository>) repositories;
-        this.repositorySystemSession = (RepositorySystemSession) session;
+        this.repositorySystemSession = session;
         this.repositorySystem = repositorySystem;
     }
     
